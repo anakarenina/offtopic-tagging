@@ -43,7 +43,11 @@ def tag_features(word,title,content):
     #normally, if it occurs many times or has many synonyms it can be a tag?
     features["occurrences"]= title.count(word)+content.count(word)
 
+    #another feature is if word appear in most frequent tags or if it appears in tags at all, we can go for SE
+    #another feature would be to check if words appear in the tag description
+    #we can also do something with ontology to check this
     #shall we account for synonyms in occurrences?
+    # we can also do something about relations among tags and how often a synonym goes with that so we should add it
     synonyms = []
     for ss in wordnet.synsets(word):
         synonyms.append(ss.lemma_names())
