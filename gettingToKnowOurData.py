@@ -8,6 +8,9 @@ from collections import Counter
 from nltk.corpus import wordnet
 from nltk.probability import FreqDist
 from matplotlib import pylab
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 import operator
 import numpy
@@ -18,6 +21,8 @@ CONTENT_COLUMN=3
 CONTENT_TAGS=4
 NGRAM=3
 
+N_MOST_FREQUENT=200
+LABEL_SIZE=3
 
 ########### Convert csv input files into dataframes###########
 biology_pd = pd.read_csv('biology.csv')
@@ -48,9 +53,44 @@ contents=[]
 tags = []
 titles=[]
 
+def getTopNTagsFreqDist(tags):
+    fdist = FreqDist(tags)
+    freq = fdist.most_common(N_MOST_FREQUENT)
+    plt.gcf().subplots_adjust(bottom=0.4)
+    plt.title('Top ' + str(N_MOST_FREQUENT) + " most frequent tags")
+    fdist.plot(N_MOST_FREQUENT, cumulative=True)
+    plt.rc('xtick', labelsize=LABEL_SIZE)
+    print(fdist.most_common(N_MOST_FREQUENT))
+
+
+def getCumulativePercentage(tags):
+    fdist1 = FreqDist(tags)
+    freq = fdist1.most_common(N_MOST_FREQUENT)
+    freqwords = [seq[0] for seq in freq]
+
+    frequencies = [seq[1] for seq in freq]
+    total = fdist1.N()
+    x = list(range(N_MOST_FREQUENT))
+    percentages = [freq / float(total) for freq in frequencies]
+
+    cs = np.cumsum(percentages)
+    plt.xticks(x, freqwords)
+    locs, labels = plt.xticks()
+    plt.setp(labels, rotation=90)
+    plt.rc('xtick', labelsize=LABEL_SIZE)
+    plt.gcf().subplots_adjust(bottom=0.4)
+    plt.plot(x, percentages)
+    plt.title('Accumulative percentage of tags covered by the most ' + str(N_MOST_FREQUENT) + " frequent tags")
+    plt.plot(x, cs, 'r--')
+    plt.show()
+
+
 for training_file in training_files:
+    #complete-tags
     ctags = []
+    #words in tags
     wtags=[]
+
     titles = []
     ctagintitle=0
     ctagnotintitle=0
@@ -63,7 +103,7 @@ for training_file in training_files:
 
         #contains u from unicode. Check if there is any problem with this
         #tcontent=removeStopWords(tokenizer.tokenize(htmlcontent.get_text().encode('utf-8')))
-        ttitle= removeStopWords(tokenizer.tokenize(entry[CONTENT_TITLE]))
+        #ttitle= removeStopWords(tokenizer.tokenize(entry[CONTENT_TITLE]))
 
         ## if we use nltk.word_tokenize instead we keep the compund words because it does not remove punctuation characters
         completetags= nltk.word_tokenize(entry[CONTENT_TAGS])
@@ -88,12 +128,14 @@ for training_file in training_files:
     #whole_data = contents.append(titles)
 
 
-    ##Getting the distribution of the first
-    fdist1 = FreqDist(tags)
+    ##Getting some plots
+    getTopNTagsFreqDist(ctags)
+    getCumulativePercentage(ctags)
+    getTopNTagsFreqDist(wtags)
+    getCumulativePercentage(wtags)
 
-    print(fdist1.N())
-    # fdist1.plot(50, cumulative=True)
-    # print(fdist1.most_common(50))
+
+
 
 
 
