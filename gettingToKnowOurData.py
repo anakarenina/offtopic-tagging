@@ -194,15 +194,27 @@ for training_file in training_files:
         # tagFreqTitle = dict.fromkeys(stemwordintags,0)
         # tagFreqContent = dict.fromkeys(stemwordintags,0)
 
-        for word in tcontent:
-            s= stemmer.stem(word)
-            if s in stemwordintags:
-                ftagsContent+=1 # we want to count frequency
-                if (s not in stemscontent): #we just care about presence, so if repeated it should not count
-                    stemscontent.append(stemmer.stem(word))
-                    ctagsincontent+=1
+
+        for word in ttitle:
+            s = stemmer.stem(word)
+            if s in stemstitle:
+                ftagsTitle += 1  # we want to count frequency
+                if (s not in stemstitle):  # we just care about presence, so if repeated it should not count
+                    stemstitle.append(stemmer.stem(word))
+                    ctagsintitle += 1
             else:
-                ctagsnotincontent+=1
+                ctagsnotintitle += 1
+
+
+        for word in tcontent:
+            s = stemmer.stem(word)
+            if s in stemwordintags:
+                ftagsContent += 1  # we want to count frequency
+                if (s not in stemscontent):  # we just care about presence, so if repeated it should not count
+                    stemscontent.append(stemmer.stem(word))
+                    ctagsincontent += 1
+            else:
+                ctagsnotincontent += 1
 
         percentagetagsintitle = float(ctagsintitle) / len(completetags)
         sumpertagsintitle += percentagetagsintitle
@@ -234,7 +246,7 @@ for training_file in training_files:
     perTaginTitle[topics[i]]=sumpertagsintitle/nsamples
     perTaginContent[topics[i]]=sumpertagsincontent/nsamples
 
-    #perFreqTaginTitle[topics[i]] = float(sumperfreqtagsintitle) / nsampleswithtagintext
+    perFreqTaginTitle[topics[i]] = float(sumperfreqtagsintitle) / nsampleswithtagintext
     perFreqTaginContent[topics[i]] = sumperfreqtagsincontent / nsampleswithtagincontext
     i+=1
 
