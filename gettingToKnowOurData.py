@@ -11,6 +11,7 @@ from matplotlib import pylab
 import numpy as np
 import matplotlib.pyplot as plt
 from nltk.stem.porter import *
+from collections import defaultdict
 
 
 import operator
@@ -26,7 +27,7 @@ N_MOST_FREQUENT=200
 LABEL_SIZE=3.5
 
 ########### Convert csv input files into dataframes###########
-biology_pd = pd.read_csv('biology.csv')
+biology_pd = pd.read_csv('biology.csv').sample(n=500)
 cooking_pd = pd.read_csv('cooking.csv').sample(n=500)
 cryptology_pd = pd.read_csv('crypto.csv').sample(n=500)
 diy_pd = pd.read_csv('diy.csv').sample(n=500)
@@ -38,6 +39,8 @@ topics= ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
 
 def removeStopWords(text):
     return [word for word in text if word not in stopwords.words('english')]
+
+
 
 training_files= []
 training_files.append(biology_pd)
@@ -93,6 +96,7 @@ def getTopNTags(tags):
     freq = fdist1.most_common(N_MOST_FREQUENT)
     return [seq[0] for seq in freq]
 
+#should call it draw bars or something like that
 def getPercentageOfTags(tagInTitledict, title):
     X = np.arange(len(tagInTitledict))
     plt.bar(X, tagInTitledict.values(), align='center', width=0.5)
@@ -109,6 +113,8 @@ all_tags=[]
 
 perTaginTitle = dict()
 perTaginContent = dict()
+perFreqTaginTitle=dict()
+perFreqTaginContent=dict()
 
 for training_file in training_files:
     #complete-tags
@@ -117,18 +123,26 @@ for training_file in training_files:
     wtags=[]
 
     titles = []
-    sumper=0
-    sumpercontent=0
+    sumpertagsintitle=0
+    sumpertagsincontent=0
+    sumperfreqtagsintitle=0
+    sumperfreqtagsincontent=0
     nsamples=0
+
+
 
     for entry in training_file.itertuples():
 
-        stems=[]
-        ctagintitle = 0
-        ctagnotintitle = 0
-        ctagincontent = 0
-        ctagnotincontent = 0
+        stemscontent=[]
+        stemstitle=[]
+        ctagsintitle = 0
+        ctagsnotintitle = 0
+        ctagsincontent = 0
+        ctagsnotincontent = 0
         nsamples+=1
+
+        ftagsTitle = 0
+        ftagsContent = 0
 
         content = entry[CONTENT_COLUMN]
         htmlcontent = BeautifulSoup(content, "html.parser")
@@ -136,7 +150,7 @@ for training_file in training_files:
 
         #contains u from unicode. Check if there is any problem with this
         #tcontent=removeStopWords(tokenizer.tokenize(htmlcontent.get_text().encode('utf-8').decode('utf-8')))
-        tcontent= removeStopWords(nltk.word_tokenize(htmlcontent.get_text().encode('utf-8').decode('utf-8')))
+        tcontent= removeStopWords(nltk.word_tokenize(htmlcontent.get_text().lower().encode('utf-8').decode('utf-8')))
         tcontent= filter(lambda word: word not in ",-?.", tcontent)
         pos_content=nltk.pos_tag(tcontent)
 
@@ -145,10 +159,11 @@ for training_file in training_files:
         #check if we need to remove CD, cardinal
         tcontent= [x for (x,y) in posTaggedContent]
 
-        title= entry[CONTENT_TITLE].decode('utf-8')
+        title= entry[CONTENT_TITLE].lower().decode('utf-8')
         ttitle= removeStopWords(nltk.word_tokenize(title))
         ttitle= filter(lambda word: word not in ",-?.", ttitle)
         pos_title= nltk.pos_tag(ttitle)
+
         posTaggedTitle = filter(lambda (word, tag): tag not in ('CC', 'DT', 'EX', 'LS', 'MD', 'PDT', 'PRP', 'PRP', 'RB', 'RBS', 'RP', 'UH', 'WDT', 'WP', 'WRB', 'TO', 'IN'),
                                   pos_title)
         # check if we need to remove CD, cardinal
@@ -169,30 +184,55 @@ for training_file in training_files:
 
         stemwordintags= [stemmer.stem(w) for w in wordintags]
 
+        # tagFreqTitle = dict.fromkeys(stemwordintags,0)
+        # tagFreqContent = dict.fromkeys(stemwordintags,0)
+
+        #maybe should do the same with complete words?
+
         for word in ttitle:
-            if stemmer.stem(word) in stemwordintags:
-                ctagintitle+=1
-            else:
-                ctagnotintitle+=1
-
-        for word in tcontent:
-            s= stemmer.stem(word)
+            s = stemmer.stem(word)
             if s in stemwordintags:
-                if (s not in stems):
-                    stems.append(stemmer.stem(word))
-                    ctagincontent+=1
+                ftagsTitle+=1  # we want to count frequency
+                if (s not in stemstitle): #we just care about presence, so if repeated it should not count
+                    stemstitle.append(stemmer.stem(word))
+                    ctagsintitle += 1
             else:
-                ctagnotincontent+=1
+                ctagsnotintitle+=1
 
-        percentagetagsintitle= float(ctagintitle)/len(completetags)
-        sumper+=percentagetagsintitle
+        # for word in tcontent:
+        #     s= stemmer.stem(word)
+        #     if s in stemwordintags:
+        #         ftagsContent+=1 # we want to count frequency
+        #         if (s not in stemscontent): #we just care about presence, so if repeated it should not count
+        #             stemscontent.append(stemmer.stem(word))
+        #             ctagsincontent+=1
+        #     else:
+        #         ctagsnotincontent+=1
 
-        percentagetagsincontent = float(ctagincontent) / len(completetags)
-        sumpercontent += percentagetagsincontent
-        # print(nsamples)
+        # percentagetagsintitle = float(ctagsintitle) / len(completetags)
+        # sumpertagsintitle += percentagetagsintitle
+        #
+        # percentagetagsincontent = float(ctagsincontent) / len(completetags)
+        # sumpertagsincontent += percentagetagsincontent
+        #
+
+        if ctagsintitle!=0:
+            avgfreqtagsintitle = float(ftagsTitle) / ctagsintitle
+            sumperfreqtagsintitle+= avgfreqtagsintitle
+
+        # if ctagsincontent!=0:
+        #     avgfreqtagsincontent = float(ftagsContent) / ctagsincontent
+        #     sumperfreqtagsincontent+= avgfreqtagsincontent
+
+
+
+
+
+
 
 
     #whole_data = contents.append(titles)
+
 
     #percentage in title
 
@@ -205,16 +245,21 @@ for training_file in training_files:
     # #print(len(notincommon)/float(N_MOST_FREQUENT)*100)
     # getTopNTagsFreqDist(ctags,topics[i])
     # getCumulativePercentage(ctags,topics[i])
-    perTaginTitle[topics[i]]=sumper/nsamples
-    perTaginContent[topics[i]]=sumpercontent/nsamples
+    # perTaginTitle[topics[i]]=sumpertagsintitle/nsamples
+    # perTaginContent[topics[i]]=sumpertagsincontent/nsamples
+
+    perFreqTaginTitle[topics[i]] = sumperfreqtagsintitle / nsamples
+    # perFreqTaginContent[topics[i]] = sumperfreqtagsincontent / nsamples
     i+=1
 
     #print("Intersection: " + set.intersection(*map(set,all_tags)) )
 
 
-getPercentageOfTags(perTaginTitle,'titles')
-getPercentageOfTags(perTaginContent,'content')
+# getPercentageOfTags(perTaginTitle,'titles')
+# getPercentageOfTags(perTaginContent,'content')
 
+getPercentageOfTags(perFreqTaginTitle,'titles')
+# getPercentageOfTags(perFreqTaginContent,'content')
 
 
 
