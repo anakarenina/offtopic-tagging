@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from nltk.stem.porter import *
 from collections import defaultdict
+from nltk.corpus import words
 
 import operator
 import numpy
