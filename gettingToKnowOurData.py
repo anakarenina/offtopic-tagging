@@ -13,8 +13,6 @@ import matplotlib.pyplot as plt
 from nltk.stem.porter import *
 from collections import defaultdict
 
-'Test'
-
 import operator
 import numpy
 
@@ -24,16 +22,18 @@ CONTENT_COLUMN=3
 CONTENT_TAGS=4
 NGRAM=3
 
+
 N_MOST_FREQUENT=200
 LABEL_SIZE=3.5
+SAMPLE_SIZE= 500
 
 ########### Convert csv input files into dataframes###########
-biology_pd = pd.read_csv('biology.csv').sample(n=500)
-cooking_pd = pd.read_csv('cooking.csv').sample(n=500)
-cryptology_pd = pd.read_csv('crypto.csv').sample(n=500)
-diy_pd = pd.read_csv('diy.csv').sample(n=500)
-robotics_pd = pd.read_csv('robotics.csv').sample(n=500)
-travel_pd = pd.read_csv('travel.csv').sample(n=500)
+biology_pd = pd.read_csv('biology.csv').sample(n=SAMPLE_SIZE)
+cooking_pd = pd.read_csv('cooking.csv').sample(n=SAMPLE_SIZE)
+cryptology_pd = pd.read_csv('crypto.csv').sample(n=SAMPLE_SIZE)
+diy_pd = pd.read_csv('diy.csv').sample(n=SAMPLE_SIZE)
+robotics_pd = pd.read_csv('robotics.csv').sample(n=SAMPLE_SIZE)
+travel_pd = pd.read_csv('travel.csv').sample(n=SAMPLE_SIZE)
 #test_pd = pd.read_csv('test.csv')
 
 topics= ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
@@ -51,9 +51,8 @@ training_files.append(diy_pd)
 training_files.append(robotics_pd)
 training_files.append(travel_pd)
 
-##to remove punctuation, use instead of nltk.word_tokenize
+##to remove punctuation, we can use instead of nltk.word_tokenize
 tokenizer= RegexpTokenizer(r'\w+')
-#tokenizer = RegexpTokenizer(r'((?<=[^\w\s])\w(?=[^\w\s])|(\W))+', gaps=True)
 contents=[]
 
 tags = []
@@ -97,14 +96,14 @@ def getTopNTags(tags):
     freq = fdist1.most_common(N_MOST_FREQUENT)
     return [seq[0] for seq in freq]
 
-#should call it draw bars or something like that
-def getPercentageOfTags(tagInTitledict, title):
+#gets a vector of values and the title to plot as a Bar plot
+def plotBarGraph(tagInTitledict, title):
     X = np.arange(len(tagInTitledict))
     plt.bar(X, tagInTitledict.values(), align='center', width=0.5)
     plt.xticks(X, tagInTitledict.keys())
     ymax = max(tagInTitledict.values()) + 0.3
     plt.ylim(0, ymax)
-    plt.title('Percentage of tags that are in '+title)
+    plt.title(title)
     plt.show()
 
 stemmer= PorterStemmer()
@@ -129,7 +128,8 @@ for training_file in training_files:
     sumperfreqtagsintitle=0
     sumperfreqtagsincontent=0
     nsamples=0
-
+    nsampleswithtagintext = 0
+    nsampleswithtagincontext=0
 
 
     for entry in training_file.itertuples():
@@ -149,7 +149,6 @@ for training_file in training_files:
         htmlcontent = BeautifulSoup(content, "html.parser")
         #urls=htmlcontent.findAll('a',href=True)
 
-        #contains u from unicode. Check if there is any problem with this
         #tcontent=removeStopWords(tokenizer.tokenize(htmlcontent.get_text().encode('utf-8').decode('utf-8')))
         tcontent= removeStopWords(nltk.word_tokenize(htmlcontent.get_text().lower().encode('utf-8').decode('utf-8')))
         tcontent= filter(lambda word: word not in ",-?.", tcontent)
@@ -175,10 +174,16 @@ for training_file in training_files:
         completetags= nltk.word_tokenize(entry[CONTENT_TAGS])
         wordintags= tokenizer.tokenize(entry[CONTENT_TAGS])
 
-        #parsed_sentence_dict = pyparseface.parse_sentence(ttitle)
-        #print("OrderedDict: %s\n" % parsed_sentence_dict)
         ctags=ctags+ completetags
         wtags=wtags+ wordintags
+
+        pos_tags = nltk.pos_tag(wtags)
+        posTaggedTags = filter(lambda (word, tag): tag not in (
+        'CC', 'DT', 'EX', 'LS', 'MD', 'PDT', 'PRP', 'PRP', 'RB', 'RBS', 'RP', 'UH', 'WDT', 'WP', 'WRB', 'TO', 'IN'),
+                                pos_tags)
+
+        wtags = [x for (x, y) in posTaggedTags]
+
 
         if (nsamples == 3126):
             print('hola')
@@ -188,79 +193,60 @@ for training_file in training_files:
         # tagFreqTitle = dict.fromkeys(stemwordintags,0)
         # tagFreqContent = dict.fromkeys(stemwordintags,0)
 
-        #maybe should do the same with complete words?
-
-        for word in ttitle:
-            s = stemmer.stem(word)
+        for word in tcontent:
+            s= stemmer.stem(word)
             if s in stemwordintags:
-                ftagsTitle+=1  # we want to count frequency
-                if (s not in stemstitle): #we just care about presence, so if repeated it should not count
-                    stemstitle.append(stemmer.stem(word))
-                    ctagsintitle += 1
+                ftagsContent+=1 # we want to count frequency
+                if (s not in stemscontent): #we just care about presence, so if repeated it should not count
+                    stemscontent.append(stemmer.stem(word))
+                    ctagsincontent+=1
             else:
-                ctagsnotintitle+=1
+                ctagsnotincontent+=1
 
-        # for word in tcontent:
-        #     s= stemmer.stem(word)
-        #     if s in stemwordintags:
-        #         ftagsContent+=1 # we want to count frequency
-        #         if (s not in stemscontent): #we just care about presence, so if repeated it should not count
-        #             stemscontent.append(stemmer.stem(word))
-        #             ctagsincontent+=1
-        #     else:
-        #         ctagsnotincontent+=1
+        percentagetagsintitle = float(ctagsintitle) / len(completetags)
+        sumpertagsintitle += percentagetagsintitle
 
-        # percentagetagsintitle = float(ctagsintitle) / len(completetags)
-        # sumpertagsintitle += percentagetagsintitle
-        #
-        # percentagetagsincontent = float(ctagsincontent) / len(completetags)
-        # sumpertagsincontent += percentagetagsincontent
-        #
+        percentagetagsincontent = float(ctagsincontent) / len(completetags)
+        sumpertagsincontent += percentagetagsincontent
+
 
         if ctagsintitle!=0:
             avgfreqtagsintitle = float(ftagsTitle) / ctagsintitle
             sumperfreqtagsintitle+= avgfreqtagsintitle
+            nsampleswithtagintext += 1
 
-        # if ctagsincontent!=0:
-        #     avgfreqtagsincontent = float(ftagsContent) / ctagsincontent
-        #     sumperfreqtagsincontent+= avgfreqtagsincontent
-
-
-
-
+        if ctagsincontent!=0:
+            avgfreqtagsincontent = float(ftagsContent) / ctagsincontent
+            sumperfreqtagsincontent+= avgfreqtagsincontent
+            nsampleswithtagincontext+=1
 
 
+    #Gathering information for plotting and analyzing data
+    topNctags= getTopNTags(ctags)
+    topNwtags= getTopNTags(wtags)
+    notincommon = set([obj for obj in topNctags if obj not in wtags])
+    all_tags.append(topNctags)
 
-
-    #whole_data = contents.append(titles)
-
-
-    #percentage in title
-
-    ##Getting some plots
-    # topNctags= getTopNTags(ctags)
-    # topNwtags= getTopNTags(wtags)
-    # notincommon = set([obj for obj in topNctags if obj not in wtags])
-    # all_tags.append(topNctags)
-    #
     # #print(len(notincommon)/float(N_MOST_FREQUENT)*100)
-    # getTopNTagsFreqDist(ctags,topics[i])
-    # getCumulativePercentage(ctags,topics[i])
-    # perTaginTitle[topics[i]]=sumpertagsintitle/nsamples
-    # perTaginContent[topics[i]]=sumpertagsincontent/nsamples
+    getTopNTagsFreqDist(ctags,topics[i])
+    getCumulativePercentage(ctags,topics[i])
+    perTaginTitle[topics[i]]=sumpertagsintitle/nsamples
+    perTaginContent[topics[i]]=sumpertagsincontent/nsamples
 
-    perFreqTaginTitle[topics[i]] = sumperfreqtagsintitle / nsamples
-    # perFreqTaginContent[topics[i]] = sumperfreqtagsincontent / nsamples
+    #perFreqTaginTitle[topics[i]] = float(sumperfreqtagsintitle) / nsampleswithtagintext
+    perFreqTaginContent[topics[i]] = sumperfreqtagsincontent / nsampleswithtagincontext
     i+=1
 
-    #print("Intersection: " + set.intersection(*map(set,all_tags)) )
+    #print("Intersection: " + set.intersection(*map(set,all_tags)) ) #NO INTERSECTION!
 
 
-# getPercentageOfTags(perTaginTitle,'titles')
-# getPercentageOfTags(perTaginContent,'content')
+plotBarGraph(perTaginTitle,'Percentage of tags that are in titles')
+plotBarGraph(perTaginContent,'Percentage of tags that are in content')
 
-getPercentageOfTags(perFreqTaginTitle,'titles')
-# getPercentageOfTags(perFreqTaginContent,'content')
+plotBarGraph(perFreqTaginTitle,'Frequency of tags in titles')
+plotBarGraph(perFreqTaginContent,'Frequency of tags in content')
+
+
 
 
 
