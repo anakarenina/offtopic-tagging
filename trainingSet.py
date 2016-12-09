@@ -6,7 +6,13 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.util import ngrams
 from collections import Counter
 from nltk.corpus import wordnet
-
+from nltk.probability import FreqDist
+from matplotlib import pylab
+import numpy as np
+import matplotlib.pyplot as plt
+from nltk.stem.porter import *
+from collections import defaultdict
+from nltk.corpus import words
 
 #see if we need to use tagging at all, and then if we do and NLTK is not enough check Stanford Tagger
 from nltk.tag import pos_tag
@@ -22,15 +28,33 @@ CONTENT_COLUMN=3
 CONTENT_TAGS=4
 NGRAM=3
 
+stemmer= PorterStemmer()
+
+
+tokenizer= RegexpTokenizer(r'\w+')
+
+
+N_MOST_FREQUENT=200
+LABEL_SIZE=3.5
+SAMPLE_SIZE= 500
 
 ########### Convert csv input files into dataframes###########
-biology_pd = pd.read_csv('biology.csv')
-cooking_pd = pd.read_csv('cooking.csv')
-cryptology_pd = pd.read_csv('crypto.csv')
-diy_pd = pd.read_csv('diy.csv')
-robotics_pd = pd.read_csv('robotics.csv')
-travel_pd = pd.read_csv('travel.csv')
-#test_pd = pd.read_csv('test.csv')
+biology_pd = pd.read_csv('biology.csv').sample(n=1)
+cooking_pd = pd.read_csv('cooking.csv').sample(n=SAMPLE_SIZE)
+cryptology_pd = pd.read_csv('crypto.csv').sample(n=SAMPLE_SIZE)
+diy_pd = pd.read_csv('diy.csv').sample(n=SAMPLE_SIZE)
+robotics_pd = pd.read_csv('robotics.csv').sample(n=SAMPLE_SIZE)
+travel_pd = pd.read_csv('travel.csv').sample(n=SAMPLE_SIZE)
+
+topics= ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
+
+training_files= []
+training_files.append(biology_pd)
+training_files.append(cooking_pd)
+training_files.append(cryptology_pd)
+training_files.append(diy_pd)
+training_files.append(robotics_pd)
+training_files.append(travel_pd)
 
 
 def removeStopWords(text):
@@ -60,50 +84,27 @@ def tag_features(word,title,content):
     return features
 
 
+
+
+
+def isTag(word,tags):
+    return stemmer.stem(word) in [stemmer.stem(tag) for tag in tags]
+
+def trainingSet(df):
+    labeled_words= preprocessWords(df)
+    featuresets = [(tag_features(word), is_tag) for (word, is_tag, title, content) in labeled_words]
+
+
+
+
+
+
 ##to remove punctuation, use instead of nltk.word_tokenize
 tokenizer= RegexpTokenizer(r'\w+')
 
-total_tags=0
-total_tags_in_title=0
-tag_ngrams = []
-ngrams={}
 
-for entry in biology_pd.itertuples():
-   #htmlcontent= BeautifulSoup(entry['content'])
-    content= entry[CONTENT_COLUMN]
-    htmlcontent= BeautifulSoup(content,"html.parser")
-    urls=htmlcontent.findAll('a',href=True)
-
-    #contains u from unicode. Check if there is any problem with this
-    tcontent=removeStopWords(tokenizer.tokenize(htmlcontent.get_text().encode('utf-8')))
-    ttitle= removeStopWords(tokenizer.tokenize(entry[CONTENT_TITLE]))
-    ttags= tokenizer.tokenize(entry[CONTENT_TAGS])
-    total_tags += len(ttags)
-
-
-    #parsed_sentence_dict = pyparseface.parse_sentence(ttitle)
-    #print("OrderedDict: %s\n" % parsed_sentence_dict)
-
-    for tag in ttags:
-        tag_features(tag, ttitle,tcontent)
-
-    i=0
-    for word in ttitle:
-        i += 1
-        if word in ttags:
-            if(i-NGRAM>=0):
-                t= tuple(ttitle[i-NGRAM:i])
-
-                if not ngrams.has_key(t):
-                    ngrams.update({t:1})
-                else:
-                    ngram_occurrences = ngrams[t]
-                    ngrams.update({t:ngram_occurrences+1})
-
-
-
-
-print(total_tags_in_title/total_tags*100)
+for df in training_files:
+   preprocessWords(df)
 
 
 
