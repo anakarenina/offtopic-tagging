@@ -1,18 +1,10 @@
 import pandas as pd
 import nltk
-from bs4 import BeautifulSoup
-from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
-from nltk.util import ngrams
-from collections import Counter
-from nltk.corpus import wordnet
 from nltk.probability import FreqDist
-from matplotlib import pylab
 import numpy as np
 import matplotlib.pyplot as plt
 from nltk.stem.porter import *
-from collections import defaultdict
-from nltk.corpus import words
 
 import sys
 reload(sys)
@@ -26,21 +18,25 @@ import settings
 CONTENT_TITLE=settings.CONTENT_TITLE
 CONTENT_COLUMN=settings.CONTENT_COLUMN
 CONTENT_TAGS= settings.CONTENT_TAGS
+PLOT = False
 
 N_MOST_FREQUENT=100
 LABEL_SIZE=3.5
-SAMPLE_SIZE= 500
+
 
 ########### Convert csv input files into dataframes###########
-biology_pd = pd.read_csv('preprocessedbiology.csv').sample(n=SAMPLE_SIZE)
-cooking_pd = pd.read_csv('preprocessedcooking.csv').sample(n=SAMPLE_SIZE)
-cryptology_pd = pd.read_csv('preprocessedcrypto.csv').sample(n=SAMPLE_SIZE)
-diy_pd = pd.read_csv('preprocesseddyi.csv').sample(n=SAMPLE_SIZE)
-robotics_pd = pd.read_csv('preprocessedrobotics.csv').sample(n=SAMPLE_SIZE)
-travel_pd = pd.read_csv('preprocessedtravel.csv').sample(n=SAMPLE_SIZE)
+biology_pd = pd.read_csv('biology.csv')
+cooking_pd = pd.read_csv('cooking.csv')
+cryptology_pd = pd.read_csv('crypto.csv')
+diy_pd = pd.read_csv('diy.csv')
+robotics_pd = pd.read_csv('robotics.csv')
+travel_pd = pd.read_csv('travel.csv')
 #test_pd = pd.read_csv('test.csv')
 
 topics= ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
+
+global topTags
+topTags= dict()
 
 training_files= []
 training_files.append(biology_pd)
@@ -52,22 +48,21 @@ training_files.append(travel_pd)
 
 ##to remove punctuation, we can use instead of nltk.word_tokenize
 tokenizer= RegexpTokenizer(r'\w+')
-contents=[]
 
-tags = []
-titles=[]
-
-def getTopNTagsFreqDist(tags, topic):
+def getTopNTagsFreqDist(tags, topic, plot):
     fdist = FreqDist(tags)
     freq = fdist.most_common(N_MOST_FREQUENT)
-    plt.gcf().subplots_adjust(bottom=0.4)
-    plt.title('Top ' + str(N_MOST_FREQUENT) + " most frequent tags in "+topic)
-    fdist.plot(N_MOST_FREQUENT, cumulative=True)
-    plt.rc('xtick', labelsize=LABEL_SIZE)
-    print(fdist.most_common(N_MOST_FREQUENT))
+    topTags[topic]= [seq[0] for seq in freq]
+
+    if plot:
+        plt.gcf().subplots_adjust(bottom=0.4)
+        plt.title('Top ' + str(N_MOST_FREQUENT) + " most frequent tags in "+topic)
+        fdist.plot(N_MOST_FREQUENT, cumulative=True)
+        plt.rc('xtick', labelsize=LABEL_SIZE)
+        print(fdist.most_common(N_MOST_FREQUENT))
 
 
-def getCumulativePercentage(tags, topic):
+def getCumulativePercentage(tags, topic, plot):
     fdist1 = FreqDist(tags)
     freq = fdist1.most_common(N_MOST_FREQUENT)
     freqwords = [seq[0] for seq in freq]
@@ -78,15 +73,17 @@ def getCumulativePercentage(tags, topic):
     percentages = [freq / float(total) for freq in frequencies]
 
     cs = np.cumsum(percentages)
-    plt.rc('xtick', labelsize=LABEL_SIZE)
-    plt.xticks(x, freqwords)
-    locs, labels = plt.xticks()
-    plt.setp(labels, rotation=90)
-    plt.gcf().subplots_adjust(bottom=0.4)
-    plt.plot(x, percentages)
-    plt.title('Accumulative percentage of tags covered by the most ' + str(N_MOST_FREQUENT) + " frequent tags in "+topic)
-    plt.plot(x, cs, 'r--')
-    plt.show()
+
+    if plot:
+        plt.rc('xtick', labelsize=LABEL_SIZE)
+        plt.xticks(x, freqwords)
+        locs, labels = plt.xticks()
+        plt.setp(labels, rotation=90)
+        plt.gcf().subplots_adjust(bottom=0.4)
+        plt.plot(x, percentages)
+        plt.title('Accumulative percentage of tags covered by the most ' + str(N_MOST_FREQUENT) + " frequent tags in "+topic)
+        plt.plot(x, cs, 'r--')
+        plt.show()
 
 
 
@@ -215,8 +212,8 @@ for training_file in training_files:
     all_tags.append(topNctags)
 
     #print(len(notincommon)/float(N_MOST_FREQUENT)*100)
-    getTopNTagsFreqDist(ctags,topics[i])
-    getCumulativePercentage(ctags,topics[i])
+    getTopNTagsFreqDist(ctags,topics[i],PLOT)
+    getCumulativePercentage(ctags,topics[i],PLOT)
 
     perTaginTitle[topics[i]]= sumpertagsintitle/nsamples
     perTaginContent[topics[i]]=sumpertagsincontent/nsamples

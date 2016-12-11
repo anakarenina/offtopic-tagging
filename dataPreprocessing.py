@@ -12,16 +12,18 @@ import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 import settings
+import gettingToKnowOurData
+
 
 CONTENT_TITLE=settings.CONTENT_TITLE
 CONTENT_COLUMN=settings.CONTENT_COLUMN
 CONTENT_TAGS= settings.CONTENT_TAGS
 
 tokenizer= RegexpTokenizer(r'\w+')
+stops = set(stopwords.words("english"))
 
 def removeStopWords(text):
-    return [word for word in text if word not in stopwords.words('english')]
-
+    return [word for word in text if word not in stops]
 
 def cleanText(text):
     ccontent = removeStopWords(text)
@@ -43,30 +45,43 @@ def preprocessFile(tf,topic):
 
     for entry in tf.itertuples():
         i=0
+        incorporate=False
 
-        #CONTENT
-        content = entry[CONTENT_COLUMN]
-        htmlcontent = BeautifulSoup(content, "html.parser")
-
-        # urls=htmlcontent.findAll('a',href=True)
-        #remove urls
-
-        for url in htmlcontent.findAll('a'):
-            del htmlcontent['href']
-
-        ccontent= cleanText(nltk.word_tokenize(htmlcontent.get_text().lower().encode('utf-8').decode('utf-8')))
-        #TITLE
-        title = entry[settings.CONTENT_TITLE].lower().encode('utf-8').decode('utf-8')
-        ctitle = cleanText(nltk.word_tokenize(title))
-
-        #COMPLETE TAGS
+        # COMPLETE TAGS
         tags = nltk.word_tokenize(entry[CONTENT_TAGS])
 
-        #WORDS WITHIN TAGS
+        # WORDS WITHIN TAGS
         wordsintags = entry[CONTENT_TAGS]
-        cwordsintags= set(cleanText(tokenizer.tokenize(wordsintags)))
+        cwordsintags = set(cleanText(tokenizer.tokenize(wordsintags)))
 
-        df = df.append({'content':  ' '.join(ccontent), 'title': ' '.join(ctitle), 'complete_tags': ' '.join(tags),'words_in_tags': ' '.join(cwordsintags)}, ignore_index=True)
+        #get main words
+        topTags= gettingToKnowOurData.topTags[topic]
+        #should lemmatize or stem
+        for word in cwordsintags:
+
+            if word in topTags:
+                incorporate=True
+
+        #only considering rows which include EXACT TOP KEYWORDS
+        # we could try lemmatizing here
+        # or we could include non-top keywords
+        if (incorporate):
+            #CONTENT
+            content = entry[CONTENT_COLUMN]
+            htmlcontent = BeautifulSoup(content, "html.parser")
+
+            # urls=htmlcontent.findAll('a',href=True)
+            #remove urls
+
+            for url in htmlcontent.findAll('a'):
+                del htmlcontent['href']
+
+            ccontent= cleanText(nltk.word_tokenize(htmlcontent.get_text().lower().encode('utf-8').decode('utf-8')))
+            #TITLE
+            title = entry[settings.CONTENT_TITLE].lower().encode('utf-8').decode('utf-8')
+            ctitle = cleanText(nltk.word_tokenize(title))
+
+            df = df.append({'content':  ' '.join(ccontent), 'title': ' '.join(ctitle), 'complete_tags': ' '.join(tags),'words_in_tags': ' '.join(cwordsintags)}, ignore_index=True)
 
         i+=1
 

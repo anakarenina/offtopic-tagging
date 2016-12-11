@@ -5,17 +5,16 @@ CONTENT_TITLE = 2
 CONTENT_COLUMN = 3
 CONTENT_TAGS = 4
 NGRAM = 3
-SAMPLE_SIZE = 500
 
 def init():
 
     ########### Convert csv input files into dataframes###########
-    biology_pd = pd.read_csv('biology.csv').sample(n=SAMPLE_SIZE)
-    cooking_pd = pd.read_csv('cooking.csv').sample(n=SAMPLE_SIZE)
-    cryptology_pd = pd.read_csv('crypto.csv').sample(n=SAMPLE_SIZE)
-    diy_pd = pd.read_csv('diy.csv').sample(n=SAMPLE_SIZE)
-    robotics_pd = pd.read_csv('robotics.csv').sample(n=SAMPLE_SIZE)
-    travel_pd = pd.read_csv('travel.csv').sample(n=SAMPLE_SIZE)
+    biology_pd = pd.read_csv('biology.csv')
+    cooking_pd = pd.read_csv('cooking.csv')
+    cryptology_pd = pd.read_csv('crypto.csv')
+    diy_pd = pd.read_csv('diy.csv')
+    robotics_pd = pd.read_csv('robotics.csv')
+    travel_pd = pd.read_csv('travel.csv')
     # test_pd = pd.read_csv('test.csv')
 
 
