@@ -6,15 +6,16 @@ CONTENT_COLUMN = 3
 CONTENT_TAGS = 4
 NGRAM = 3
 
+
 def init():
 
     ########### Convert csv input files into dataframes###########
-    biology_pd = pd.read_csv('biology.csv')
-    cooking_pd = pd.read_csv('cooking.csv')
-    cryptology_pd = pd.read_csv('crypto.csv')
-    diy_pd = pd.read_csv('diy.csv')
-    robotics_pd = pd.read_csv('robotics.csv')
-    travel_pd = pd.read_csv('travel.csv')
+    biology_pd = pd.read_csv('biology.csv').sample(500)
+    cooking_pd = pd.read_csv('cooking.csv').sample(500)
+    cryptology_pd = pd.read_csv('crypto.csv').sample(500)
+    diy_pd = pd.read_csv('diy.csv').sample(500)
+    robotics_pd = pd.read_csv('robotics.csv').sample(500)
+    travel_pd = pd.read_csv('travel.csv').sample(500)
     # test_pd = pd.read_csv('test.csv')
 
 

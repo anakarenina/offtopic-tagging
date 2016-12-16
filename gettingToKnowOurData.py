@@ -23,28 +23,8 @@ PLOT = False
 N_MOST_FREQUENT=100
 LABEL_SIZE=3.5
 
-
-########### Convert csv input files into dataframes###########
-biology_pd = pd.read_csv('biology.csv')
-cooking_pd = pd.read_csv('cooking.csv')
-cryptology_pd = pd.read_csv('crypto.csv')
-diy_pd = pd.read_csv('diy.csv')
-robotics_pd = pd.read_csv('robotics.csv')
-travel_pd = pd.read_csv('travel.csv')
-#test_pd = pd.read_csv('test.csv')
-
-topics= ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
-
 global topTags
-topTags= dict()
-
-training_files= []
-training_files.append(biology_pd)
-training_files.append(cooking_pd)
-training_files.append(cryptology_pd)
-training_files.append(diy_pd)
-training_files.append(robotics_pd)
-training_files.append(travel_pd)
+topTags = dict()
 
 ##to remove punctuation, we can use instead of nltk.word_tokenize
 tokenizer= RegexpTokenizer(r'\w+')
@@ -95,7 +75,13 @@ def getTopNTags(tags):
 #gets a vector of values and the title to plot as a Bar plot
 def plotBarGraph(tagInTitledict, title):
     X = np.arange(len(tagInTitledict))
-    plt.bar(X, tagInTitledict.values(), align='center', width=0.5)
+    bar= plt.bar(X, tagInTitledict.values(), align='center', width=0.5)
+    bar[0].set_color('#E26D6D')
+    bar[1].set_color('#E26DBF')
+    bar[2].set_color('#6DA0E2')
+    bar[3].set_color('#6DE2B7')
+    bar[4].set_color('#ACE26D')
+    bar[5].set_color('#93CFDE')
     plt.xticks(X, tagInTitledict.keys())
     ymax = max(tagInTitledict.values()) + 0.3
     plt.ylim(0, ymax)
@@ -113,7 +99,7 @@ perFreqTaginTitle=dict()
 perFreqTaginContent=dict()
 perFreqNonTagWordsinContent= dict()
 
-for training_file in training_files:
+for training_file in settings.training_files:
     #complete-tags
     ctags = []
     #words in tags
@@ -212,15 +198,15 @@ for training_file in training_files:
     all_tags.append(topNctags)
 
     #print(len(notincommon)/float(N_MOST_FREQUENT)*100)
-    getTopNTagsFreqDist(ctags,topics[i],PLOT)
-    getCumulativePercentage(ctags,topics[i],PLOT)
+    getTopNTagsFreqDist(ctags,settings.topics[i],PLOT)
+    getCumulativePercentage(ctags,settings.topics[i],PLOT)
 
-    perTaginTitle[topics[i]]= sumpertagsintitle/nsamples
-    perTaginContent[topics[i]]=sumpertagsincontent/nsamples
+    perTaginTitle[settings.topics[i]]= sumpertagsintitle/nsamples
+    perTaginContent[settings.topics[i]]=sumpertagsincontent/nsamples
 
-    perFreqTaginTitle[topics[i]] = sumperfreqtagsintitle / nsampleswithtagintext
-    perFreqTaginContent[topics[i]] = sumperfreqtagsincontent / nsampleswithtagincontext
-    perFreqNonTagWordsinContent[topics[i]] = sumperfreqnontagwordsincontent / nsamples
+    perFreqTaginTitle[settings.topics[i]] = sumperfreqtagsintitle / nsampleswithtagintext
+    perFreqTaginContent[settings.topics[i]] = sumperfreqtagsincontent / nsampleswithtagincontext
+    perFreqNonTagWordsinContent[settings.topics[i]] = sumperfreqnontagwordsincontent / nsamples
     i+=1
 
     #print("Intersection: " + set.intersection(*map(set,all_tags)) ) #NO INTERSECTION!

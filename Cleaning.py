@@ -24,14 +24,14 @@ tokenizer= RegexpTokenizer(r'\w+')
 stops = set(stopwords.words("english"))
 
 def cleanText (text): 
-	ccontent = filter(lambda word: word not in string.punctuation+'``', ccontent)
+	ccontent = filter(lambda word: word not in string.punctuation+'``', text)
 def removeStopWords(text):
     return [word for word in text if word not in stops]
 
 def cleanText(text):
     #ccontent = removeStopWords(text) in this case we want to leave in stop words 
     	# we want to take them out, however when we are looking at stop words 
-    ccontent = filter(lambda word: word not in string.punctuation+'``', ccontent) 
+    ccontent = filter(lambda word: word not in string.punctuation+'``', text)
     ccontent= filter(lambda word: None == re.match(r'\'', word), ccontent)
     pos_content = nltk.pos_tag(ccontent) #part of speech labeling 
 

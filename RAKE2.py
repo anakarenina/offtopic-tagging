@@ -1,16 +1,3 @@
-# Implementation of RAKE - Rapid Automtic Keyword Exraction algorithm
-# as described in:
-# Rose, S., D. Engel, N. Cramer, and W. Cowley (2010).
-# Automatic keyword extraction from indi-vidual documents.
-# In M. W. Berry and J. Kogan (Eds.), Text Mining: Applications and Theory.unknown: John Wiley and Sons, Ltd.
-#
-# NOTE: The original code (from https://github.com/aneesha/RAKE)
-# has been extended by a_medelyan (zelandiya)
-# with a set of heuristics to decide whether a phrase is an acceptable candidate
-# as well as the ability to set frequency and phrase length parameters
-# important when dealing with longer documents
-
-import settings
 #from __future__ import absolute_import
 #from __future__ import print_function
 import re
@@ -22,9 +9,42 @@ from bs4 import BeautifulSoup
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
+import pandas as pd
+from nltk.corpus import stopwords
+import itertools
+
+CONTENT_TITLE = 2
+CONTENT_COLUMN = 3
+CONTENT_TAGS = 4
+NGRAM = 3
+
 
 debug = False
-test = True
+test = False
+
+########### Convert csv input files into dataframes###########
+biology_pd = pd.read_csv('rakebiology.csv')
+cooking_pd = pd.read_csv('rakecooking.csv')
+cryptology_pd = pd.read_csv('rakecrypto.csv')
+diy_pd = pd.read_csv('rakedyi.csv')
+robotics_pd = pd.read_csv('rakerobotics.csv')
+travel_pd = pd.read_csv('raketravel.csv')
+# test_pd = pd.read_csv('test.csv')
+
+
+global topics
+topics = ['biology', 'cooking', 'crypto', 'dyi', 'robotics', 'travel']
+
+global training_files
+training_files = []
+training_files.append(biology_pd)
+training_files.append(cooking_pd)
+training_files.append(cryptology_pd)
+training_files.append(diy_pd)
+training_files.append(robotics_pd)
+training_files.append(travel_pd)
+
+
 
 
 def is_number(s):
@@ -70,7 +90,7 @@ def split_sentences(text):
     Utility function to return a list of sentences.
     @param text The text that must be split in to sentences.
     """
-    sentence_delimiters = re.compile(u'[\\[\\]\n.!?,;:\t\\-\\"\\(\\)\\\'\u2019\u2013]')
+    sentence_delimiters = re.compile(u'[\\[\\]\n.!?,;:\t\\\\"\\(\\)\\\'\u2019\u2013]')
     sentences = sentence_delimiters.split(text)
     return sentences
 
@@ -78,7 +98,7 @@ def split_sentences(text):
 def build_stop_word_regex(stop_word_file_path):
     stop_word_list = load_stop_words(stop_word_file_path)
     stop_word_regex_list = []
-    stop_word_list= set(nltk.corpus.stopwords.words())
+    stop_word_list= set(stopwords.words("english"))
     for word in stop_word_list:
         word_regex = '\\b' + word + '\\b'
         stop_word_regex_list.append(word_regex)
@@ -93,10 +113,26 @@ def generate_candidate_keywords(sentence_list, stopword_pattern, min_char_length
         phrases = tmp.split("|")
         for phrase in phrases:
             phrase = phrase.strip().lower()
+            if phrase != "" :
+                phrase = parse_phrase(phrase)
             if phrase != "" and is_acceptable(phrase, min_char_length, max_words_length):
                 phrase_list.append(phrase)
     return phrase_list
 
+def parse_phrase(phrase):
+
+    words=[]
+    for word in phrase.split():
+        words.append(word)
+
+    pos_tags= nltk.pos_tag(words)
+
+    ##further removing little lexical content words
+    posTaggedContent = filter(lambda (word, tag): tag not in (
+        'CC', 'DT', 'EX', 'LS', 'MD', 'PDT', 'PRP', 'PRP', 'RB', 'RBS', 'RP', 'UH', 'WDT', 'WP', 'WRB', 'TO', 'IN',
+        'CD','JJ'),pos_tags)
+    words= [word for (word,tag) in posTaggedContent]
+    return " ".join(words)
 
 def is_acceptable(phrase, min_char_length, max_words_length):
 
@@ -106,6 +142,8 @@ def is_acceptable(phrase, min_char_length, max_words_length):
 
     # a phrase must have a max number of words
     words = phrase.split()
+
+
     if len(words) > max_words_length:
         return 0
 
@@ -170,7 +208,7 @@ def generate_candidate_keyword_scores(phrase_list, word_score, min_keyword_frequ
 
 
 class Rake(object):
-    def __init__(self, stop_words_path, min_char_length=3, max_words_length=3, min_keyword_frequency=1):
+    def __init__(self, stop_words_path, min_char_length=5, max_words_length=3, min_keyword_frequency=2):
         self.__stop_words_path = stop_words_path
         self.__stop_words_pattern = build_stop_word_regex(stop_words_path)
         self.__min_char_length = min_char_length
@@ -188,10 +226,14 @@ class Rake(object):
 
         sorted_keywords = sorted(six.iteritems(keyword_candidates), key=operator.itemgetter(1), reverse=True)
 
-        totalKeywords = len(sortedKeywords)
+        keywords= [x for (x,y) in sorted_keywords]
+        sorted_keywords=list(itertools.chain.from_iterable([x.split() for x in keywords]))
 
-        for keyword in sortedKeywords[0:(totalKeywords / 3)]:
-            print "Keyword: ", keyword[0], ", score: ", keyword[1]
+        totalKeywords = len(sorted_keywords)
+
+        # for keyword in sorted_keywords[0:(totalKeywords / 3)]:
+        #     print "Keyword: ", keyword[0], ", score: ", keyword[1]
+
         return sorted_keywords
 
 
@@ -201,17 +243,17 @@ if test:
     stoppath = "SmartStoplist.txt"  # SMART stoplist misses some of the lower-scoring keywords in Figure 1.5, which means that the top 1/3 cuts off one of the 4.0 score words in Table 1.1
 
 
-    for file in settings.training_files:
+    for file in training_files:
 
         for entry in file.itertuples():
 
-            content = entry[settings.CONTENT_COLUMN]
+            content = entry[CONTENT_COLUMN]
             htmlcontent = BeautifulSoup(content, "html.parser")
 
             for url in htmlcontent.findAll('a'):
                 del htmlcontent['href']
 
-            text =  entry[settings.CONTENT_TITLE].encode('utf-8').decode('utf-8')+htmlcontent.get_text().encode('utf-8').decode('utf-8')
+            text =  entry[CONTENT_TITLE].encode('utf-8').decode('utf-8')+htmlcontent.get_text().encode('utf-8').decode('utf-8')
 
             #text = "Compatibility of systems of linear constraints over the set of natural numbers. Criteria of compatibility of a system of linear Diophantine equations, strict inequations, and nonstrict inequations are considered. Upper bounds for components of a minimal set of solutions and algorithms of construction of minimal generating sets of solutions for all types of systems are given. These criteria and the corresponding algorithms for constructing a minimal supporting set of solutions can be used in solving all the considered types of systems and systems of mixed types."
 

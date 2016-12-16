@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from nltk.stem.porter import *
 from sklearn.feature_extraction.text import CountVectorizer
 
-
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -23,7 +22,7 @@ CONTENT_TAGS= settings.CONTENT_TAGS
 
 N_MOST_FREQUENT=100
 LABEL_SIZE=3.5
-SAMPLE_SIZE= 500
+SAMPLE_SIZE= 3000
 
 stemmer= PorterStemmer()
 
@@ -39,7 +38,7 @@ biology_pd = pd.read_csv('preprocessedbiology.csv').sample(n=SAMPLE_SIZE)
 cooking_pd = pd.read_csv('preprocessedcooking.csv').sample(n=SAMPLE_SIZE)
 cryptology_pd = pd.read_csv('preprocessedcrypto.csv').sample(n=SAMPLE_SIZE)
 diy_pd = pd.read_csv('preprocesseddyi.csv').sample(n=SAMPLE_SIZE)
-robotics_pd = pd.read_csv('preprocessedrobotics.csv').sample(n=SAMPLE_SIZE)
+robotics_pd = pd.read_csv('preprocessedrobotics.csv').sample(n=1000)
 travel_pd = pd.read_csv('preprocessedtravel.csv').sample(n=SAMPLE_SIZE)
 #test_pd = pd.read_csv('test.csv')
 
@@ -59,15 +58,13 @@ tokenizer= RegexpTokenizer(r'\w+')
 
 def tag_features(word,title,content):
     features = {}
-    stitle= [stemmer.stem(w) for w in title]
-    scontent= set([stemmer.stem(w) for w in content])
 
-    features["is_in_title"] = stemmer.stem(word) in stitle
-
-    features["is_in_content"] = stemmer.stem(word) in scontent
+    features["is_in_title"] = stemmer.stem(word) in title
 
     #normally, if it occurs many times or has many synonyms it can be a tag?
-    features["occurrences"]= stitle.count(word)+content.count(word)
+    features["occurrences"]= content.count(stemmer.stem(word))
+
+    features["is_in_content"] = features["occurrences"] >0
 
     #another feature is if word appear in most frequent tags or if it appears in tags at all, we can go for SE
     #another feature would be to check if words appear in the tag description
@@ -88,116 +85,57 @@ def tag_features(word,title,content):
 def isTag(word,tags):
     return stemmer.stem(word) in [stemmer.stem(tag) for tag in tags]
 
-
-def calculate_word_scores(self, phrase_list):
-    word_freq = nltk.FreqDist()
-    word_degree = nltk.FreqDist()
-    for phrase in phrase_list:
-      degree = len(filter(lambda x: not isNumeric(x), phrase)) - 1
-      for word in phrase:
-        word_freq.inc(word)
-        word_degree.inc(word, degree) # other words
-    for word in word_freq.keys():
-      word_degree[word] = word_degree[word] + word_freq[word] # itself
-    # word score = deg(w) / freq(w)
-    word_scores = {}
-    for word in word_freq.keys():
-      word_scores[word] = word_degree[word] / word_freq[word]
-    return word_scores
-
-
-def isNumeric(word):
-    try:
-        float(word) if '.' in word else int(word)
-        return True
-    except ValueError:
-        return False
-
-
-class RakeKeywordExtractor:
-    def __init__(self):
-        self.top_fraction = 1  # consider top third candidate keywords by score
-
-    def _calculate_word_scores(self, word_list):
-        word_freq = nltk.FreqDist()
-        word_degree = nltk.FreqDist()
-        for word in word_list:
-            degree = len(filter(lambda x: not isNumeric(x), phrase)) - 1
-            for word in phrase:
-                word_freq[word] += 1
-                word_degree[word]+=degree  # other words
-        for word in word_freq.keys():
-            word_degree[word] = word_degree[word] + word_freq[word]  # itself
-        # word score = deg(w) / freq(w)
-        word_scores = {}
-        for word in word_freq.keys():
-            word_scores[word] = word_degree[word] / word_freq[word]
-        return word_scores
-
-    def _calculate_phrase_scores(self, phrase_list, word_scores):
-        phrase_scores = {}
-        for phrase in phrase_list:
-            phrase_score = 0
-            for word in phrase:
-                phrase_score += word_scores[word]
-            phrase_scores[" ".join(phrase)] = phrase_score
-        return phrase_scores
-
-    def extract(self, text, incl_scores=False):
-        phrase_list = nltk.sent_tokenize(text)
-        word_scores = self._calculate_word_scores(phrase_list)
-        phrase_scores = self._calculate_phrase_scores(
-            phrase_list, word_scores)
-        sorted_phrase_scores = sorted(phrase_scores.iteritems(),
-                                      key=operator.itemgetter(1), reverse=True)
-        n_phrases = len(sorted_phrase_scores)
-        if incl_scores:
-            return sorted_phrase_scores[0:int(n_phrases / self.top_fraction)]
-        else:
-            return map(lambda x: x[0],
-                       sorted_phrase_scores[0:int(n_phrases / self.top_fraction)])
-
+#
+# def trainingSet():
+#
+#     for training_file in training_files:
+#         # Get the number of reviews based on the dataframe column size
+#         num_reviews = training_file["title"].size
+#
+#         # Initialize an empty list to hold the clean reviews
+#         clean_train_reviews = []
+#
+#         # Loop over each review; create an index i that goes from 0 to the length
+#         # of the movie review list
+#         for i in xrange( 0, num_reviews ):
+#             clean_train_reviews.append( training_file["title"][i] )
+#
+#         train_data_features = vectorizer.fit_transform(clean_train_reviews)
+#         train_data_features = train_data_features.toarray()
+#         vocab = vectorizer.get_feature_names()
+#         print(vocab)
 
 
 def trainingSet():
 
-    rake = RakeKeywordExtractor()
+    training= []
 
     for training_file in training_files:
-
         for entry in training_file.itertuples():
-
+            title= nltk.word_tokenize(entry[CONTENT_TITLE].encode('utf-8').decode('utf-8'))
             content = nltk.word_tokenize(entry[CONTENT_COLUMN].encode('utf-8').decode('utf-8'))
-            title = nltk.word_tokenize(entry[CONTENT_TITLE].encode('utf-8').decode('utf-8'))
+            tags= nltk.word_tokenize(entry[CONTENT_TAGS])
 
-            completetags = nltk.word_tokenize(entry[CONTENT_TAGS])
-            wordintags = tokenizer.tokenize(entry[CONTENT_TAGS])
+            stitle = set([stemmer.stem(w) for w in title])
+            scontent = [stemmer.stem(w) for w in content]
 
-            keywords=rake.extract(entry[CONTENT_COLUMN]+entry[CONTENT_TITLE],incl_scores=True)
+            candidates= set (title+content)
 
+            for candidate in candidates:
+                tup= (tag_features(candidate,stitle,scontent), isTag(candidate,tags))
+                training.append(tup)
 
-def trainingSet2():
-
-    for training_file in training_files:
-        # Get the number of reviews based on the dataframe column size
-        num_reviews = training_file["title"].size
-
-        # Initialize an empty list to hold the clean reviews
-        clean_train_reviews = []
 
         # Loop over each review; create an index i that goes from 0 to the length
         # of the movie review list
-        for i in xrange( 0, num_reviews ):
-            clean_train_reviews.append( training_file["title"][i] )
-
-        train_data_features = vectorizer.fit_transform(clean_train_reviews)
-        train_data_features = train_data_features.toarray()
-        vocab = vectorizer.get_feature_names()
-        print(vocab)
+        train_set, test_set = training[500:], training[:500]
+        classifier = nltk.NaiveBayesClassifier.train(train_set)
+        print(nltk.classify.accuracy(classifier, test_set))
+        classifier.show_most_informative_features(5)
 
 
-
-settings.init()
-trainingSet2()
+# settings.init()
+# dataPreprocessing.init()
+trainingSet()
 
 
