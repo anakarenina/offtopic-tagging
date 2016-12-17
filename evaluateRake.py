@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from six.moves import range
-__author__ = 'a_medelyan'
 import RAKE2
 import sys
 from bs4 import BeautifulSoup

@@ -143,9 +143,13 @@ def is_acceptable(phrase, min_char_length, max_words_length):
     # a phrase must have a max number of words
     words = phrase.split()
 
-
     if len(words) > max_words_length:
         return 0
+
+    # a word cannot be so big
+    for word in words:
+        if len(word)>12  or len(word) < min_char_length or not re.match("^[A-Za-z0-9_-]*$", word):
+            return 0
 
     digits = 0
     alpha = 0
